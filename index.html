@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RSM Training: Box-Behnken Design</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.26.0/plotly.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            font-size: 1.2em;
+            color: #666;
+        }
+        
+        .nav-tabs {
+            display: flex;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 15px;
+            padding: 10px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            gap: 10px;
+        }
+        
+        .nav-tab {
+            flex: 1;
+            padding: 15px 20px;
+            background: transparent;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            color: #666;
+        }
+        
+        .nav-tab.active {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+        
+        .nav-tab:hover:not(.active) {
+            background: rgba(102, 126, 234, 0.1);
+            transform: translateY(-1px);
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .card h2 {
+            color: #4a5568;
+            margin-bottom: 20px;
+            font-size: 1.8em;
+        }
+        
+        .card h3 {
+            color: #667eea;
+            margin: 20px 0 15px 0;
+            font-size: 1.3em;
+        }
+        
+        .interactive-section {
+            background: linear-gradient(135deg, #f6f9fc 0%, #e9f4ff 100%);
+            border: 2px solid #667eea;
+            border-radius: 15px;
+            padding: 25px;
+            margin: 20px 0;
+        }
+        
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .control-group {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .control-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #4a5568;
+        }
+        
+        .control-group input, .control-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: border-color 0.3s ease;
+        }
+        
+        .control-group input:focus, .control-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .btn {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+        }
+        
+        .plot-container {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px 0;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+        
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .data-table th, .data-table td {
+            padding: 15px;
+            text-align: center;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        .data-table th {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            font-weight: 600;
+        }
+        
+        .data-table tr:hover {
+            background: rgba(102, 126, 234, 0.05);
+        }
+        
+        .highlight {
+            background: linear-gradient(45deg, #ffd89b, #19547b);
+            padding: 20px;
+            border-radius: 10px;
+            color: white;
+            margin: 20px 0;
+        }
+        
+        .quiz-section {
+            background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 50%, #fecfef 100%);
+            border-radius: 15px;
+            padding: 25px;
+            margin: 20px 0;
+        }
+        
+        .quiz-question {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 15px 0;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .quiz-options {
+            margin: 15px 0;
+        }
+        
+        .quiz-options label {
+            display: block;
+            padding: 10px;
+            margin: 5px 0;
+            background: #f8f9fa;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+        
+        .quiz-options label:hover {
+            background: #e9ecef;
+        }
+        
+        .result-correct {
+            background: #d4edda;
+            color: #155724;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        
+        .result-incorrect {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        
+        .code-block {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 20px;
+            border-radius: 10px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            margin: 15px 0;
+            overflow-x: auto;
+        }
+        
+        .step-indicator {
+            display: flex;
+            justify-content: space-between;
+            margin: 20px 0;
+        }
+        
+        .step {
+            flex: 1;
+            text-align: center;
+            padding: 10px;
+            background: #e2e8f0;
+            margin: 0 5px;
+            border-radius: 5px;
+            transition: all 0.3s ease;
+        }
+        
+        .step.active {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Response Surface Methodology Training</h1>
+            <p>Master Box-Behnken Design for Software Optimization</p>
+        </div>
+        
+        <div class="nav-tabs">
+            <button class="nav-tab active" onclick="showTab('basics')">Fundamentals</button>
+            <button class="nav-tab" onclick="showTab('design')">Box-Behnken Design</button>
+            <button class="nav-tab" onclick="showTab('analysis')">3D Analysis</button>
+            <button class="nav-tab" onclick="showTab('interpretation')">Interpretation</button>
+            <button class="nav-tab" onclick="showTab('followup')">Follow-up Studies</button>
+            <button class="nav-tab" onclick="showTab('quiz')">Knowledge Check</button>
+        </div>
+        
+        <div id="basics" class="tab-content active">
+            <div class="card">
+                <h2>What is Response Surface Methodology?</h2>
+                <p>Response Surface Methodology (RSM) is a collection of mathematical and statistical techniques used to model and analyze problems where a response variable is influenced by several input variables. The objective is to optimize this response.</p>
+                
+                <h3>Key Concepts for Software Developers:</h3>
+                <ul style="margin-left: 20px; line-height: 1.8;">
+                    <li><strong>Response Variable (Y):</strong> The output you want to optimize (e.g., execution time, memory usage, throughput)</li>
+                    <li><strong>Factors (X₁, X₂, X₃):</strong> Input parameters that affect the response (e.g., buffer size, thread count, cache size)</li>
+                    <li><strong>Design Points:</strong> Specific combinations of factor levels where experiments are conducted</li>
+                    <li><strong>Response Surface:</strong> Mathematical model describing the relationship between factors and response</li>
+                </ul>
+                
+                <div class="interactive-section">
+                    <h3>Interactive Example: Web Server Optimization</h3>
+                    <p>Let's optimize a web server's performance by tuning three parameters:</p>
+                    <div class="controls">
+                        <div class="control-group">
+                            <label>Thread Pool Size (X₁):</label>
+                            <input type="range" id="threads" min="10" max="100" value="50" oninput="updateExample()">
+                            <span id="threadValue">50</span>
+                        </div>
+                        <div class="control-group">
+                            <label>Buffer Size KB (X₂):</label>
+                            <input type="range" id="buffer" min="64" max="1024" value="512" oninput="updateExample()">
+                            <span id="bufferValue">512</span>
+                        </div>
+                        <div class="control-group">
+                            <label>Cache Size MB (X₃):</label>
+                            <input type="range" id="cache" min="128" max="2048" value="1024" oninput="updateExample()">
+                            <span id="cacheValue">1024</span>
+                        </div>
+                    </div>
+                    <div class="highlight">
+                        <h4>Predicted Response Time: <span id="responseTime">145</span> ms</h4>
+                        <p>This simplified model shows how multiple factors interact to affect performance.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="design" class="tab-content">
+            <div class="card">
+                <h2>Box-Behnken Design Explained</h2>
+                <p>Box-Behnken design is a type of response surface design that doesn't include combinations where all factors are simultaneously at their highest or lowest levels. This makes it more efficient than a full factorial design.</p>
+                
+                <h3>Why Box-Behnken for Software Optimization?</h3>
+                <ul style="margin-left: 20px; line-height: 1.8;">
+                    <li>Fewer experimental runs required (efficiency in testing)</li>
+                    <li>No extreme corner points (safer for system stability)</li>
+                    <li>Good for 3+ factors</li>
+                    <li>Quadratic model fitting capability</li>
+                </ul>
+                
+                <div class="interactive-section">
+                    <h3>Generate Your Box-Behnken Design</h3>
+                    <div class="controls">
+                        <div class="control-group">
+                            <label>Number of Factors:</label>
+                            <select id="numFactors" onchange="generateDesign()">
+                                <option value="3">3 Factors</option>
+                                <option value="4">4 Factors</option>
+                                <option value="5">5 Factors</option>
+                            </select>
+                        </div>
+                        <div class="control-group">
+                            <label>Center Points:</label>
+                            <input type="number" id="centerPoints" value="3" min="1" max="10" onchange="generateDesign()">
+                        </div>
+                    </div>
+                    <button class="btn" onclick="generateDesign()">Generate Design Matrix</button>
+                    <div id="designMatrix"></div>
+                </div>
+                
+                <div class="highlight">
+                    <h4>Design Principles:</h4>
+                    <p>• Each factor appears at three levels: -1 (low), 0 (center), +1 (high)<br>
+                    • Design points are located at the midpoints of edges of the factor space<br>
+                    • Center points estimate pure error and check for curvature</p>
+                </div>
+            </div>
+        </div>
+        
+        <div id="analysis" class="tab-content">
+            <div class="card">
+                <h2>3D Visualization and Analysis</h2>
+                <p>Understanding 3D response surfaces is crucial for identifying optimal operating conditions and understanding factor interactions.</p>
+                
+                <div class="interactive-section">
+                    <h3>Interactive 3D Response Surface</h3>
+                    <div class="controls">
+                        <div class="control-group">
+                            <label>Primary Factor (X-axis):</label>
+                            <select id="xFactor">
+                                <option value="0">Thread Count</option>
+                                <option value="1">Buffer Size</option>
+                                <option value="2">Cache Size</option>
+                            </select>
+                        </div>
+                        <div class="control-group">
+                            <label>Secondary Factor (Y-axis):</label>
+                            <select id="yFactor">
+                                <option value="1">Buffer Size</option>
+                                <option value="0">Thread Count</option>
+                                <option value="2">Cache Size</option>
+                            </select>
+                        </div>
+                        <div class="control-group">
+                            <label>Fixed Factor Level:</label>
+                            <input type="range" id="fixedLevel" min="-1" max="1" step="0.1" value="0" oninput="updateFixedValue()">
+                            <span id="fixedValue">0.0</span>
+                        </div>
+                    </div>
+                    <button class="btn" onclick="generate3DPlot()">Generate 3D Surface</button>
+                    <div class="plot-container">
+                        <div id="surface3d" style="width:100%;height:500px;"></div>
+                    </div>
+                </div>
+                
+                <h3>Reading 3D Response Surfaces</h3>
+                <div class="step-indicator">
+                    <div class="step active">1. Identify Peak/Valley</div>
+                    <div class="step">2. Check Curvature</div>
+                    <div class="step">3. Find Gradients</div>
+                    <div class="step">4. Locate Optimum</div>
+                </div>
+                
+                <ul style="margin-left: 20px; line-height: 1.8;">
+                    <li><strong>Peak/Valley:</strong> Highest/lowest point indicates optimal response</li>
+                    <li><strong>Curvature:</strong> Bowl shape = single optimum, Saddle = multiple optima</li>
+                    <li><strong>Gradients:</strong> Steep slopes show high sensitivity to factor changes</li>
+                    <li><strong>Contour Lines:</strong> Connect points of equal response value</li>
+                </ul>
+            </div>
+        </div>
+        
+        <div id="interpretation" class="tab-content">
+            <div class="card">
+                <h2>Interpreting RSM Results</h2>
+                
+                <h3>Model Equation</h3>
+                <p>A typical second-order RSM model looks like:</p>
+                <div class="code-block">
+Y = β₀ + β₁X₁ + β₂X₂ + β₃X₃ + β₁₁X₁² + β₂₂X₂² + β₃₃X₃² + β₁₂X₁X₂ + β₁₃X₁X₃ + β₂₃X₂X₃ + ε
+                </div>
+                
+                <div class="interactive-section">
+                    <h3>Model Coefficient Analysis</h3>
+                    <table class="data-table" id="coeffTable">
+                        <thead>
+                            <tr>
+                                <th>Term</th>
+                                <th>Coefficient</th>
+                                <th>P-value</th>
+                                <th>Significance</th>
+                                <th>Interpretation</th>
+                            </tr>
+                        </thead>
+                        <tbody id="coeffTableBody">
+                        </tbody>
+                    </table>
+                    <button class="btn" onclick="generateCoefficients()">Generate Example Coefficients</button>
+                </div>
+                
+                <h3>Key Interpretation Guidelines</h3>
+                <div class="highlight">
+                    <h4>Statistical Significance (P-values):</h4>
+                    <p>• P < 0.05: Statistically significant effect<br>
+                    • P > 0.05: Not statistically significant<br>
+                    • Remove non-significant terms to simplify model</p>
+                </div>
+                
+                <h4>Coefficient Meanings:</h4>
+                <ul style="margin-left: 20px; line-height: 1.8;">
+                    <li><strong>Linear coefficients (β₁, β₂, β₃):</strong> Main effects of each factor</li>
+                    <li><strong>Quadratic coefficients (β₁₁, β₂₂, β₃₃):</strong> Curvature effects</li>
+                    <li><strong>Interaction coefficients (β₁₂, β₁₃, β₂₃):</strong> How factors affect each other</li>
+                </ul>
+            </div>
+        </div>
+        
+        <div id="followup" class="tab-content">
+            <div class="card">
+                <h2>Follow-up Experiments and Optimization</h2>
+                
+                <h3>When to Conduct Follow-up Studies</h3>
+                <ul style="margin-left: 20px; line-height: 1.8;">
+                    <li>Optimum appears to be outside the experimental region</li>
+                    <li>Model lacks fit or has poor R²</li>
+                    <li>Need to verify predicted optimum</li>
+                    <li>Want to explore a different region</li>
+                </ul>
+                
+                <div class="interactive-section">
+                    <h3>Optimization Path Planning</h3>
+                    <div class="controls">
+                        <div class="control-group">
+                            <label>Current Best Response:</label>
+                            <input type="number" id="currentBest" value="125.5" step="0.1">
+                        </div>
+                        <div class="control-group">
+                            <label>Target Improvement (%):</label>
+                            <input type="range" id="targetImprovement" min="5" max="50" value="20" oninput="updateTarget()">
+                            <span id="targetValue">20%</span>
+                        </div>
+                        <div class="control-group">
+                            <label>Optimization Method:</label>
+                            <select id="optMethod">
+                                <option value="steepest">Steepest Ascent/Descent</option>
+                                <option value="ridge">Ridge Analysis</option>
+                                <option value="canonical">Canonical Analysis</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button class="btn" onclick="planOptimization()">Plan Next Experiments</button>
+                    <div id="optimizationPlan"></div>
+                </div>
+                
+                <h3>Verification Strategy</h3>
+                <div class="step-indicator">
+                    <div class="step active">1. Predict Optimum</div>
+                    <div class="step">2. Run Confirmation</div>
+                    <div class="step">3. Validate Model</div>
+                    <div class="step">4. Implement</div>
+                </div>
+                
+                <div class="code-block">
+# Python example for confirmation runs
+optimal_conditions = {
+    'threads': 75,
+    'buffer_kb': 256,
+    'cache_mb': 1536
+}
+
+# Run 3-5 confirmation experiments
+confirmation_results = []
+for i in range(5):
+    result = run_experiment(**optimal_conditions)
+    confirmation_results.append(result)
+
+predicted_response = 95.2  # From RSM model
+actual_mean = np.mean(confirmation_results)
+prediction_error = abs(actual_mean - predicted_response)
+
+if prediction_error < 0.1 * predicted_response:
+    print("Model validated - implement optimal conditions")
+else:
+    print("Model needs refinement - consider additional experiments")
+                </div>
+            </div>
+        </div>
+        
+        <div id="quiz" class="tab-content">
+            <div class="quiz-section">
+                <h2>Knowledge Check</h2>
+                
+                <div class="quiz-question">
+                    <h4>Question 1: What is the main advantage of Box-Behnken design over full factorial design?</h4>
+                    <div class="quiz-options">
+                        <label><input type="radio" name="q1" value="a"> It includes all possible factor combinations</label>
+                        <label><input type="radio" name="q1" value="b"> It requires fewer experimental runs while still fitting quadratic models</label>
+                        <label><input type="radio" name="q1" value="c"> It only works with two factors</label>
+                        <label><input type="radio" name="q1" value="d"> It doesn't require center points</label>
+                    </div>
+                    <div id="q1-result"></div>
+                </div>
+                
+                <div class="quiz-question">
+                    <h4>Question 2: In a 3D response surface plot, what does a "saddle point" indicate?</h4>
+                    <div class="quiz-options">
+                        <label><input type="radio" name="q2" value="a"> A clear global optimum</label>
+                        <label><input type="radio" name="q2" value="b"> An area where optimization is not possible</label>
+                        <label><input type="radio" name="q2" value="c"> A point that is optimal in one direction but not in another</label>
+                        <label><input type="radio" name="q2" value="d"> A data collection error</label>
+                    </div>
+                    <div id="q2-result"></div>
+                </div>
+                
+                <div class="quiz-question">
+                    <h4>Question 3: What does a P-value < 0.05 indicate for a model coefficient?</h4>
+                    <div class="quiz-options">
+                        <label><input type="radio" name="q3" value="a"> The coefficient should be removed from the model</label>
+                        <label><input type="radio" name="q3" value="b"> The coefficient is statistically significant</label>
+                        <label><input type="radio" name="q3" value="c"> The model needs more data</label>
+                        <label><input type="radio" name="q3" value="d"> There's a 95% chance the coefficient is wrong</label>
+                    </div>
+                    <div id="q3-result"></div>
+                </div>
+                
+                <button class="btn" onclick="checkAnswers()">Check All Answers</button>
+                <div id="quiz-score"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let currentTab = 'basics';
+        
+        // Tab switching
+        function showTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Remove active class from all nav tabs
+            document.querySelectorAll('.nav-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Show selected tab
+            document.getElementById(tabName).classList.add('active');
+            
+            // Add active class to clicked nav tab
+            event.target.classList.add('active');
+            
+            currentTab = tabName;
+        }
+        
+        // Update example in basics tab
+        function updateExample() {
+            const threads = document.getElementById('threads').value;
+            const buffer = document.getElementById('buffer').value;
+            const cache = document.getElementById('cache').value;
+            
+            document.getElementById('threadValue').textContent = threads;
+            document.getElementById('bufferValue').textContent = buffer;
+            document.getElementById('cacheValue').textContent = cache;
+            
+            // Simplified response surface equation for demonstration
+            const response = 200 - (threads * 0.5) - (buffer * 0.1) - (cache * 0.05) + 
+                           (threads * buffer * 0.001) + Math.pow(threads - 50, 2) * 0.01;
+            
+            document.getElementById('responseTime').textContent = Math.round(response * 10) / 10;
+        }
+        
+        // Generate Box-Behnken design matrix
+        function generateDesign() {
+            const numFactors = parseInt(document.getElementById('numFactors').value);
+            const centerPoints = parseInt(document.getElementById('centerPoints').value);
+            
+            let design = [];
+            
+            // Generate Box-Behnken design points based on number of factors
+            if (numFactors === 3) {
+                design = [
+                    [-1, -1, 0], [1, -1, 0], [-1, 1, 0], [1, 1, 0],
+                    [-1, 0, -1], [1, 0, -1], [-1, 0, 1], [1, 0, 1],
+                    [0, -1, -1], [0, 1, -1], [0, -1, 1], [0, 1, 1]
+                ];
+            } else if (numFactors === 4) {
+                design = [
+                    [-1, -1, 0, 0], [1, -1, 0, 0], [-1, 1, 0, 0], [1, 1, 0, 0],
+                    [-1, 0, -1, 0], [1, 0, -1, 0], [-1, 0, 1, 0], [1, 0, 1, 0],
+                    [-1, 0, 0, -1], [1, 0, 0, -1], [-1, 0, 0, 1], [1, 0, 0, 1],
+                    [0, -1, -1, 0], [0, 1, -1, 0], [0, -1, 1, 0], [0, 1, 1, 0],
+                    [0, -1, 0, -1], [0, 1, 0, -1], [0, -1, 0, 1], [0, 1, 0, 1],
+                    [0, 0, -1, -1], [0, 0, 1, -1], [0, 0, -1, 1], [0, 0, 1, 1]
+                ];
+            }
+            
+            // Add center points
+            for (let i = 0; i < centerPoints; i++) {
+                design.push(new Array(numFactors).fill(0));
+            }
+            
+            // Create table
+            let tableHTML = '<table class="data-table"><thead><tr><th>Run</th>';
+            for (let i = 1; i <= numFactors; i++) {
+                tableHTML += `<th>X${i}</th>`;
+            }
+            tableHTML += '</tr></thead><tbody>';
+            
+            design.forEach((point, index) => {
+                tableHTML += `<tr><td>${index + 1}</td>`;
+                point.forEach(value => {
+                    tableHTML += `<td>${value}</td>`;
+                });
+                tableHTML += '</tr>';
+            });
+            
+            tableHTML += '</tbody></table>';
+            document.getElementById('designMatrix').innerHTML = tableHTML;
+        }
+        
+        // Generate 3D surface plot
+        function generate3DPlot() {
+            const xFactor = parseInt(document.getElementById('xFactor').value);
+            const yFactor = parseInt(document.getElementById('yFactor').value);
+            const fixedLevel = parseFloat(document.getElementById('fixedLevel').value);
+            
+            // Generate grid data
+            const resolution = 20;
+            const x = [];
+            const y = [];
+            const z = [];
+            
+            for (let i = 0; i < resolution; i++) {
+                x.push([]);
+                y.push([]);
+                z.push([]);
+                for (let j = 0; j < resolution; j++) {
+                    const xVal = -1 + (2 * i / (resolution - 1));
+                    const yVal = -1 + (2 * j / (resolution - 1));
+                    
+                    x[i].push(xVal);
+                    y[i].push(yVal);
+                    
+                    // Create factors array
+                    let factors = [0, 0, 0];
+                    factors[xFactor] = xVal;
+                    factors[yFactor] = yVal;
+                    
+                    // Set fixed factor
+                    const fixedFactor = [0, 1, 2].find(f => f !== xFactor && f !== yFactor);
+                    factors[fixedFactor] = fixedLevel;
+                    
+                    // Calculate response using a quadratic model
+                    const response = 100 + 
+                        -15 * factors[0] + 10 * factors[1] + -5 * factors[2] +
+                        5 * factors[0] * factors[0] + 8 * factors[1] * factors[1] + 3 * factors[2] * factors[2] +
+                        -3 * factors[0] * factors[1] + 2 * factors[0] * factors[2] + -1 * factors[1] * factors[2];
+                    
+                    z[i].push(response);
+                }
+            }
+            
+            const data = [{
+                z: z,
+                x: x,
+                y: y,
+                type: 'surface',
+                colorscale: 'Viridis',
+                showscale: true
+            }];
+            
+            const factorNames = ['Thread Count', 'Buffer Size', 'Cache Size'];
+            
+            const layout = {
+                title: `Response Surface: ${factorNames[xFactor]} vs ${factorNames[yFactor]}`,
+                scene: {
+                    xaxis: { title: factorNames[xFactor] },
+                    yaxis: { title: factorNames[yFactor] },
+                    zaxis: { title: 'Response Time (ms)' }
+                },
+                margin: { l: 0, r: 0, b: 0, t: 40 }
+            };
+            
+            Plotly.newPlot('surface3d', data, layout);
+        }
+        
+        // Update fixed value display
+        function updateFixedValue() {
+            const value = document.getElementById('fixedLevel').value;
+            document.getElementById('fixedValue').textContent = parseFloat(value).toFixed(1);
+        }
+        
+        // Generate example coefficients
+        function generateCoefficients() {
+            const coefficients = [
+                { term: 'Intercept', coeff: 98.45, pvalue: 0.000, significant: true, interpretation: 'Average response at center point' },
+                { term: 'X₁ (Threads)', coeff: -12.34, pvalue: 0.002, significant: true, interpretation: 'Increasing threads decreases response time' },
+                { term: 'X₂ (Buffer)', coeff: 8.76, pvalue: 0.015, significant: true, interpretation: 'Larger buffer increases response time' },
+                { term: 'X₃ (Cache)', coeff: -3.21, pvalue: 0.087, significant: false, interpretation: 'Cache effect not significant' },
+                { term: 'X₁²', coeff: 5.67, pvalue: 0.025, significant: true, interpretation: 'Quadratic curvature in threads' },
+                { term: 'X₂²', coeff: 7.89, pvalue: 0.018, significant: true, interpretation: 'Quadratic curvature in buffer' },
+                { term: 'X₃²', coeff: 2.34, pvalue: 0.156, significant: false, interpretation: 'Cache curvature not significant' },
+                { term: 'X₁X₂', coeff: -4.56, pvalue: 0.041, significant: true, interpretation: 'Thread-buffer interaction' },
+                { term: 'X₁X₃', coeff: 1.23, pvalue: 0.234, significant: false, interpretation: 'Thread-cache interaction not significant' },
+                { term: 'X₂X₃', coeff: -0.89, pvalue: 0.456, significant: false, interpretation: 'Buffer-cache interaction not significant' }
+            ];
+            
+            let tableBody = '';
+            coefficients.forEach(coeff => {
+                const significance = coeff.significant ? 'Significant' : 'Not Significant';
+                const rowClass = coeff.significant ? 'style="background-color: #d4edda;"' : 'style="background-color: #f8d7da;"';
+                
+                tableBody += `
+                    <tr ${rowClass}>
+                        <td>${coeff.term}</td>
+                        <td>${coeff.coeff.toFixed(2)}</td>
+                        <td>${coeff.pvalue.toFixed(3)}</td>
+                        <td>${significance}</td>
+                        <td>${coeff.interpretation}</td>
+                    </tr>
+                `;
+            });
+            
+            document.getElementById('coeffTableBody').innerHTML = tableBody;
+        }
+        
+        // Update target improvement display
+        function updateTarget() {
+            const value = document.getElementById('targetImprovement').value;
+            document.getElementById('targetValue').textContent = value + '%';
+        }
+        
+        // Plan optimization strategy
+        function planOptimization() {
+            const currentBest = parseFloat(document.getElementById('currentBest').value);
+            const targetImprovement = parseFloat(document.getElementById('targetImprovement').value);
+            const method = document.getElementById('optMethod').value;
+            
+            const targetValue = currentBest * (1 - targetImprovement / 100);
+            
+            let plan = `<div class="highlight">
+                <h4>Optimization Plan</h4>
+                <p><strong>Current Best:</strong> ${currentBest} ms</p>
+                <p><strong>Target Value:</strong> ${targetValue.toFixed(1)} ms</p>
+                <p><strong>Required Improvement:</strong> ${(currentBest - targetValue).toFixed(1)} ms (${targetImprovement}%)</p>
+            </div>`;
+            
+            if (method === 'steepest') {
+                plan += `<h4>Steepest Descent Method:</h4>
+                <ol style="margin-left: 20px; line-height: 1.8;">
+                    <li>Calculate gradient at current point: ∇f = [∂f/∂X₁, ∂f/∂X₂, ∂f/∂X₃]</li>
+                    <li>Move in direction of steepest descent: X₍ₙₑw₎ = X₍current₎ - λ∇f</li>
+                    <li>Choose step size λ = 0.1 to 0.3 initially</li>
+                    <li>Run experiments along this path</li>
+                    <li>Continue until no further improvement</li>
+                </ol>
+                <div class="code-block">
+# Next experimental points (coded units):
+Point 1: X₁ = 0.2, X₂ = -0.1, X₃ = 0.0
+Point 2: X₁ = 0.4, X₂ = -0.2, X₃ = 0.0  
+Point 3: X₁ = 0.6, X₂ = -0.3, X₃ = 0.0
+                </div>`;
+            } else if (method === 'ridge') {
+                plan += `<h4>Ridge Analysis Method:</h4>
+                <ol style="margin-left: 20px; line-height: 1.8;">
+                    <li>Perform eigenvalue decomposition of coefficient matrix</li>
+                    <li>Find ridge of maximum response</li>
+                    <li>Parameterize the ridge path</li>
+                    <li>Select points along the ridge for experimentation</li>
+                </ol>`;
+            } else {
+                plan += `<h4>Canonical Analysis Method:</h4>
+                <ol style="margin-left: 20px; line-height: 1.8;">
+                    <li>Transform to canonical coordinates</li>
+                    <li>Classify stationary point (maximum, minimum, saddle)</li>
+                    <li>Determine distance and direction to optimum</li>
+                    <li>Plan experiments in optimal region</li>
+                </ol>`;
+            }
+            
+            document.getElementById('optimizationPlan').innerHTML = plan;
+        }
+        
+        // Quiz functionality
+        function checkAnswers() {
+            const answers = {
+                q1: 'b',
+                q2: 'c', 
+                q3: 'b'
+            };
+            
+            let score = 0;
+            let total = Object.keys(answers).length;
+            
+            Object.keys(answers).forEach(question => {
+                const selected = document.querySelector(`input[name="${question}"]:checked`);
+                const resultDiv = document.getElementById(`${question}-result`);
+                
+                if (selected) {
+                    if (selected.value === answers[question]) {
+                        resultDiv.innerHTML = '<div class="result-correct">✓ Correct!</div>';
+                        score++;
+                    } else {
+                        resultDiv.innerHTML = '<div class="result-incorrect">✗ Incorrect. Try again!</div>';
+                    }
+                } else {
+                    resultDiv.innerHTML = '<div class="result-incorrect">Please select an answer.</div>';
+                }
+            });
+            
+            const percentage = Math.round((score / total) * 100);
+            let feedback = '';
+            
+            if (percentage >= 90) {
+                feedback = 'Excellent! You have a strong understanding of RSM concepts.';
+            } else if (percentage >= 70) {
+                feedback = 'Good job! Review the areas you missed for better understanding.';
+            } else {
+                feedback = 'Keep studying! Review the training materials and try again.';
+            }
+            
+            document.getElementById('quiz-score').innerHTML = `
+                <div class="highlight">
+                    <h4>Your Score: ${score}/${total} (${percentage}%)</h4>
+                    <p>${feedback}</p>
+                </div>
+            `;
+        }
+        
+        // Initialize the page
+        document.addEventListener('DOMContentLoaded', function() {
+            updateExample();
+            generateDesign();
+            generateCoefficients();
+            
+            // Add event listeners for quiz
+            document.querySelectorAll('input[type="radio"]').forEach(radio => {
+                radio.addEventListener('change', function() {
+                    // Clear previous results when selection changes
+                    const question = this.name;
+                    document.getElementById(`${question}-result`).innerHTML = '';
+                });
+            });
+        });
+    </script>
+</body>
+</html>
